@@ -1,0 +1,105 @@
+## MEETING MINUTES
+
+## Minutes - Meeting on Friday, September 11 (4pm to 5:30pm) - Everyone is present 
+
+- Mock-up of a website by ChatGPT with burgundy/dark red, gold and white
+- Separate website for new clients and another platform for existing clients?
+- Initially: MVP and later full account
+- Later: Login + accounts = more professional and personalization, user info
+- Payroll for full access to the AI vs Free version with a less performant AI --> subscription based (not a percentage of our clients’ revenue because too much dependant on the markets)
+- Macros
+- AI provides only insights vs AI does the trades for the clients, maybe higher subscription fees for AI doing the trades
+- Maybe have many different models, and for each trade choose the best model
+- Use the cookies/tokens/things-based training (behaviors, not only words)
+- AI goes through the news and other social medias like Twitter (watching for specific accounts, like Trump)
+- Auto-trading could be interesting
+- Look into the companies’ history to help make the link between events/news and the gains and losses on the stock markets (ex: Apple loses with iPhone 7 and audio-jack removal, then it goes back up when it comes back) --> these predictions can be made by LLMs (web search, APIs, open-source AIs) and then fine-tuned them afterwards so that there is a software engineering part to the project
+- Confirm with teacher if we have a budget
+- Importance of the front-end to attract clients
+- Brainstorming over having a domain, link with an email domain, and potentially changing the name of the project
+- Day and time for next meeting (Monday, in person after class) 
+
+ 
+
+## Minutes - Meeting on Friday, September 14 (after class) - Everyone is present 
+
+- Two algorithms (one for the news, one for the chart) that look at the prices separately and then we calculate the average. Possibly blend then together.
+- Next step: Individually analyse the one similar company on the market and note the features that we want to keep or add to our product (we will then meet and compare on our side what we found) 
+
+
+## Minutes – Meeting on Monday, September 21, 4:30pm – Everyone is present 
+
+- Comparison of the companies in our market review
+- More reflection on what specifically our product should be, the scope of the project 
+- Each on our side we will brainstorm tasks that during the next reunion we will review. 
+- We will work on a pipeline for next reunion, so that we can establish how we want to advance.  
+
+## Minutes – Meeting on Friday, September 25, 4:30pm to 5:30pm – Everyone is present 
+
+SMA method. Graph example of apple stock 2020-now. Price of stock per day, average of stock over the last 20 days, average of stock over the last 50 days. Dots append when blue and orange line intercept. Add additional things: news, sentiment analyses.  
+
+With the SMA method graph, we analysed with the apple releases and how the curve worked in the pass 
+
+We need to track all events and history (ex: if the system crashes) 
+
+ 
+
+Scope confirmation:     
+
+Alpaca: simulation with paper stock, evaluate our algorithms 
+
+Missing:  
+
+implementing live news. (sentiment to see if we want to skip or invest) 
+
+Use the history of the companies and old news 
+
+For sentiment analysis, for now we want to use an already trained model, and maybe enhance it later (we will see later if we want to train our own) 
+
+Tasks distribution:  
+
+Choose stocks (ex: NVIDIA) and analyse how the curve changes with the news.  
+
+Océane and Lili-Rose: Work on the Front-End (Create the dashboard prototype) 
+
+Ryan: Backend and connection between the front and backend, infrastructure 
+
+Erik, Andy, Ryan: training the AI sentiment analysis + algorithm that studies in the past what happened to cause peaks and downs in graphs, will learn based on its own trades 
+
+Clients: Erik knows people that can be potential clients, idea of using simulations if people do not want to invest real money https://virtual-stock-exchange.com/  
+
+ MUST HAVE
+Working frontend
+Working backend
+Financial API integration
+News API integration
+Database
+At least one working AI model/API
+AI news summaries
+Stock price chart
+News display
+Basic market analysis
+At least several supported stocks
+Error handling
+Basic testing
+Architecture documentation
+Working end-to-end demo
+NICE TO HAVE
+Sentiment analysis
+Event extraction
+Historical news comparison
+Better trend analysis
+Multiple indices
+Local LLM
+RAG
+Advanced visualizations
+NOT REQUIRED
+Trading
+Automated trading
+User accounts
+Subscriptions
+Social media
+Prediction
+Multiple LLMs
+Fine-tuning
+Personalized portfolios
