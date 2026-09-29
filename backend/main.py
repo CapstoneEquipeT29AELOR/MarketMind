@@ -1,3 +1,5 @@
+#To run : .\.venv\Scripts\python.exe -m pip config debug
+
 from fastapi import FastAPI
 
 app = FastAPI(
