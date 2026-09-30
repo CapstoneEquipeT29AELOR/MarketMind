@@ -1,0 +1,8 @@
+yfinance
+pandas
+numpy
+scikit-learn
+xgboost
+joblib
+transformers   # only needed later for FinBERT sentiment scoring
+torch          # for any nvidia gpu or mac install the appropriate build from pytorch.org, the regular "pip install torch" will install the cpu version, and will be slower
