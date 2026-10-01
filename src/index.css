@@ -1,0 +1,102 @@
+/* Sets the shared colors, layout, and responsive styles for the app. */
+:root {
+  font-family: Arial, sans-serif;
+  color: #f8fafc;
+  background: #0f172a;
+  font-synthesis: none;
+}
+
+* { box-sizing: border-box; }
+body { min-width: 320px; min-height: 100vh; margin: 0; background: #0f172a; }
+button, select { font: inherit; }
+button:focus-visible, select:focus-visible { outline: 2px solid #38bdf8; outline-offset: 2px; }
+
+.app-shell { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 28px; width: min(100% - 32px, 1180px); margin: 0 auto; padding: 24px 0 40px; }
+.sidebar { position: sticky; top: 24px; align-self: start; }
+.brand { display: inline-block; margin: 0 0 20px; color: #f8fafc; font-size: 17px; font-weight: 700; text-decoration: none; }
+.sidebar-nav { display: grid; gap: 5px; }
+.nav-item { padding: 9px 10px; border: 0; border-radius: 3px; background: transparent; color: #cbd5e1; cursor: pointer; text-align: left; }
+.nav-item:hover, .nav-item.active { background: #1e293b; color: #38bdf8; }
+.main-area { min-width: 0; }
+.page-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 18px; border-bottom: 1px solid #334155; }
+h1, h2, h3, p { margin-top: 0; }
+h1 { margin-bottom: 4px; font-size: 24px; }
+h2 { margin: 0 0 12px; font-size: 17px; }
+h3 { margin: 14px 0 8px; font-size: 14px; }
+.page-header p { margin-bottom: 0; color: #94a3b8; font-size: 13px; }
+.page-header label { display: flex; align-items: center; gap: 8px; color: #94a3b8; font-size: 13px; }
+select { min-width: 90px; padding: 8px 10px; border: 1px solid #475569; border-radius: 3px; background: #1e293b; color: #f8fafc; }
+.dashboard { display: grid; gap: 22px; padding-top: 20px; }
+.dashboard section { min-width: 0; }
+.chart-news { padding-top: 18px; border-top: 1px solid #334155; }
+.stock-quote { margin: 0 0 5px; font-size: 28px; font-weight: 700; }
+.positive { color: #22c55e; }
+.negative { color: #ef4444; }
+.stock-quote + p { margin-bottom: 0; font-size: 14px; }
+.summary-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 20px; }
+.summary-list p { margin: 0; color: #94a3b8; font-size: 13px; }
+.summary-list strong { color: #f8fafc; }
+.chart-news { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.chart-news h2 { margin-bottom: 10px; }
+.price-chart { display: block; width: 100%; height: 150px; }
+.chart-times { display: flex; justify-content: space-between; margin: 6px 0 0; color: #94a3b8; font-size: 11px; }
+.news-item { padding: 9px 0; border-bottom: 1px solid #263449; }
+.news-item:first-child { padding-top: 0; }
+.news-item:last-child { border-bottom: 0; }
+.news-item h3 { margin: 0 0 5px; font-size: 13px; font-weight: 500; line-height: 1.4; }
+.news-item p { margin: 0 0 5px; color: #cbd5e1; font-size: 12px; line-height: 1.5; }
+.news-item small, .dashboard small { color: #94a3b8; font-size: 11px; }
+.analysis-summary { max-width: 760px; color: #cbd5e1; font-size: 13px; line-height: 1.6; }
+.dashboard section > p { font-size: 13px; }
+.dashboard ul { display: grid; gap: 6px; margin: 0 0 12px; padding-left: 19px; color: #cbd5e1; font-size: 12px; line-height: 1.5; }
+.page-content { display: grid; align-content: start; gap: 22px; padding-top: 20px; }
+.section-row, .panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.section-title { margin: 0; }
+.section-kicker, .section-asof, .table-count { color: #94a3b8; font-size: 12px; }
+.summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 20px; }
+.summary-card { margin: 0; color: #94a3b8; font-size: 13px; }
+.summary-card strong { color: #f8fafc; }
+.table-panel, .news-page-panel, .settings-panel { min-width: 0; }
+.market-table-wrap { overflow-x: auto; }
+.market-table { width: 100%; border-collapse: collapse; text-align: left; }
+.market-table th, .market-table td { padding: 9px 8px; border-bottom: 1px solid #334155; font-size: 12px; white-space: nowrap; }
+.market-table th { color: #94a3b8; font-weight: 600; }
+.market-table td:first-child { display: table-cell; }
+.table-stock-mark { margin-right: 7px; color: #38bdf8; }
+.market-table tbody tr { cursor: pointer; }
+.market-table tbody tr:hover { background: #1e293b; }
+.stocks-list { display: grid; max-width: 620px; }
+.stock-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; padding: 12px 8px; border: 0; border-bottom: 1px solid #334155; background: transparent; color: #f8fafc; cursor: pointer; text-align: left; }
+.stock-row:first-child { border-top: 1px solid #334155; }
+.stock-row:hover { background: #1e293b; }
+.stock-row span:last-child { text-align: right; }
+.table-action, .load-more { padding: 5px 8px; border: 1px solid #475569; border-radius: 3px; background: #1e293b; color: #f8fafc; cursor: pointer; }
+.news-page-list { display: grid; }
+.news-page-list .news-item { padding: 12px 0; }
+.news-page-list .news-item p { max-width: 760px; }
+.live-pill { color: #94a3b8; font-size: 12px; }
+.analysis-intro { padding-bottom: 4px; }
+.analysis-intro p, .settings-intro { color: #94a3b8; font-size: 13px; }
+.analysis-page .price-chart { margin-top: 8px; }
+.settings-panel > .panel-heading { justify-content: flex-start; }
+.setting-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid #334155; }
+.setting-copy { display: grid; flex: 1; gap: 4px; }
+.setting-copy span, .setting-value { color: #94a3b8; font-size: 12px; }
+.setting-icon, .settings-icon { color: #38bdf8; }
+.load-more { display: block; margin: 12px auto 0; }
+
+@media (max-width: 620px) {
+  .app-shell { display: block; width: min(100% - 24px, 980px); padding-top: 14px; }
+  .sidebar { position: static; margin-bottom: 16px; }
+  .brand { margin-bottom: 10px; }
+  .sidebar-nav { display: flex; overflow-x: auto; gap: 4px; }
+  .nav-item { flex: 0 0 auto; padding: 8px; font-size: 12px; }
+  .page-header { align-items: flex-start; }
+  .page-header label { flex-direction: column; align-items: flex-start; }
+  .summary-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .chart-news { grid-template-columns: 1fr; gap: 18px; }
+  .stock-row { grid-template-columns: .8fr 1fr 1fr; }
+  .setting-row { align-items: flex-start; flex-wrap: wrap; }
+  .setting-value { margin-left: auto; }
+}
