@@ -8,7 +8,7 @@ Usage:
   python finbert_sentiment.py fnspid_news.csv --since 2020-01-01 --out news_scored_all.csv
 
 example:
-  python finbert_sentiment.py "C:\Users\andyj\Downloads\nasdaq_exteral_data.csv" --tickers AAPL GOOGL MSFT AMD TSLA NVDA --out news_scored_all.csv
+  python finbert_sentiment.py "C:/Users/andyj/Downloads/nasdaq_exteral_data.csv" --tickers AAPL GOOGL MSFT AMD TSLA NVDA --out news_scored_all.csv
   nasdaq_exteral_data.csv is the dataset where there is all the news regarding FNSPID: https://huggingface.co/datasets/1ceyyu/FNSPID
   You will need to download it (28gb)
 
