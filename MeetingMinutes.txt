@@ -103,3 +103,10 @@ Prediction
 Multiple LLMs
 Fine-tuning
 Personalized portfolios
+
+## Minutes – Meeting on Friday, October 9th, 4:00 - Everyone is present 
+
+- Front end a encore besoin d’amélioration mais s’en vient bien. On a la page principale du Dashboard avec d’autre onglet pour consultation. Tout l’interface a des données fictives qui pourrons être remplacées lorsque le temps vient. Il faut mettre tout le frontend dans un fichier afin de finalement pouvoir les merge quand le temp vient. L’ajout de réglages (langue, position géographique, time zone, etc.) et quelques peaufinements de l’interface est la prochaine étape prévue. 
+- Ryan a fait un code de trading (algorithmes), Andy a rajouté les news dataset et évalue si les news sont positifs ou négatives. Les nouvelles négative avaient des corrélations avec les graphiques de Ryan.  
+- Utiliser github issues to track the issues 
+- Creation of a new GitHub account as the owner of MarketMind. This way when/if our project gets deployed, we have an account for the project (CapstoneEquipeT29AELOR) 
