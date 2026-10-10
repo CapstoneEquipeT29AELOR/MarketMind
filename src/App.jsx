@@ -21,8 +21,8 @@ export default function App() {
   return (
     <div className="app-shell">
       <Sidebar activeSection={activeSection} onNavigate={setActiveSection} />
+      <Header activeSection={activeSection} selectedStock={selectedStock} onSelectStock={setSelectedStock} onNavigate={setActiveSection}/>
       <main className="main-area">
-        <Header activeSection={activeSection} selectedStock={selectedStock} onSelectStock={setSelectedStock} />
         <Page selectedStock={selectedStock} analysis={analysis} onNavigate={setActiveSection} onSelectStock={setSelectedStock} />
       </main>
     </div>
