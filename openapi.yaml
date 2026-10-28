@@ -1,0 +1,352 @@
+openapi: 3.0.3
+info:
+  title: MarketMind API
+  version: 0.1.0
+  description: >-
+    Minimal backend contract for the MarketMind frontend. This includes only the
+    data and endpoints currently required by the app UI.
+servers:
+  - url: http://localhost:8080/api
+    description: Local backend
+paths:
+  /stocks:
+    get:
+      summary: Get the list of tracked stocks for the dashboard and stock selector
+      operationId: listStocks
+      responses:
+        '200':
+          description: Array of stock records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Stock'
+
+  /stocks/{symbol}/chart:
+    get:
+      summary: Get historical chart values for a stock
+      operationId: getStockChart
+      parameters:
+        - in: path
+          name: symbol
+          required: true
+          schema:
+            type: string
+            example: NVDA
+        - in: query
+          name: range
+          required: false
+          schema:
+            type: string
+            enum: [1D, 1W, 1M, 3M, 1Y, 5Y]
+            default: 1M
+      responses:
+        '200':
+          description: Chart payload for the selected stock and range
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChartResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /news:
+    get:
+      summary: Get the market news feed
+      operationId: getNews
+      responses:
+        '200':
+          description: News items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NewsItem'
+
+  /analysis/{symbol}:
+    get:
+      summary: Get AI sentiment analysis for a stock
+      operationId: getAnalysis
+      parameters:
+        - in: path
+          name: symbol
+          required: true
+          schema:
+            type: string
+            example: NVDA
+      responses:
+        '200':
+          description: Sentiment analysis object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockAnalysis'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /preferences:
+    get:
+      summary: Get saved user preferences
+      operationId: getPreferences
+      responses:
+        '200':
+          description: User preferences object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferences'
+    put:
+      summary: Update saved user preferences
+      operationId: updatePreferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPreferences'
+      responses:
+        '200':
+          description: Updated preferences
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferences'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+components:
+  responses:
+    NotFound:
+      description: The requested resource was not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    BadRequest:
+      description: Invalid request payload
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
+          example: Stock symbol not found
+
+    Stock:
+      type: object
+      required:
+        - symbol
+        - name
+        - exchange
+        - price
+        - change
+        - changePercent
+        - marketCap
+        - volume
+        - dayHigh
+        - dayLow
+        - chart
+      properties:
+        symbol:
+          type: string
+          example: NVDA
+        name:
+          type: string
+          example: NVIDIA Corporation
+        exchange:
+          type: string
+          example: NASDAQ
+        price:
+          type: number
+          example: 118.42
+        change:
+          type: number
+          example: 2.68
+        changePercent:
+          type: number
+          example: 2.31
+        marketCap:
+          type: string
+          example: $2.90T
+        volume:
+          type: string
+          example: 42.8M
+        dayHigh:
+          type: number
+          example: 119.87
+        dayLow:
+          type: number
+          example: 115.24
+        chart:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: number
+          example:
+            '1D': [115.8, 116.1, 116.4, 118.42]
+            '1M': [108.6, 112.3, 116.5, 118.42]
+
+    ChartResponse:
+      type: object
+      required:
+        - symbol
+        - range
+        - points
+      properties:
+        symbol:
+          type: string
+          example: NVDA
+        range:
+          type: string
+          example: 1M
+        points:
+          type: array
+          items:
+            type: number
+          example: [108.6, 110.4, 109.8, 112.3, 118.42]
+
+    NewsItem:
+      type: object
+      required:
+        - source
+        - time
+        - category
+        - headline
+        - summary
+        - symbols
+        - tone
+      properties:
+        source:
+          type: string
+          example: Reuters
+        time:
+          type: string
+          example: 12 min ago
+        category:
+          type: string
+          example: Technology
+        headline:
+          type: string
+          example: Chipmakers rise as fresh demand forecasts lift the semiconductor outlook
+        summary:
+          type: string
+          example: Analysts point to sustained data-center investment as a key driver of near-term demand.
+        symbols:
+          type: array
+          items:
+            type: string
+          example: [NVDA, AMD]
+        tone:
+          type: string
+          enum: [positive, neutral, negative]
+          example: positive
+
+    StockAnalysis:
+      type: object
+      required:
+        - sentiment
+        - score
+        - confidence
+        - summary
+        - factors
+      properties:
+        sentiment:
+          type: string
+          example: Bullish
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+          example: 78
+        confidence:
+          type: integer
+          minimum: 0
+          maximum: 100
+          example: 84
+        summary:
+          type: string
+          example: NVIDIA is showing constructive momentum as demand for accelerated computing remains resilient.
+        factors:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalysisFactor'
+
+    AnalysisFactor:
+      type: object
+      required:
+        - label
+        - detail
+        - impact
+      properties:
+        label:
+          type: string
+          example: Data-center demand
+        detail:
+          type: string
+          example: Cloud providers continue to signal strong infrastructure investment.
+        impact:
+          type: string
+          enum: [positive, caution, negative]
+          example: positive
+
+    UserPreferences:
+      type: object
+      required:
+        - language
+        - theme
+        - timeZone
+        - region
+        - currency
+        - chartPeriod
+        - notifications
+      properties:
+        language:
+          type: string
+          enum: [en, fr]
+          example: en
+        theme:
+          type: string
+          enum: [light, dark, system]
+          example: system
+        timeZone:
+          type: string
+          example: America/New_York
+        region:
+          type: string
+          example: US
+        currency:
+          type: string
+          example: USD
+        chartPeriod:
+          type: string
+          enum: [1D, 1W, 1M, 3M, 1Y, 5Y]
+          example: 1M
+        notifications:
+          $ref: '#/components/schemas/NotificationPreferences'
+
+    NotificationPreferences:
+      type: object
+      required:
+        - priceAlerts
+        - marketNews
+        - dailySummary
+      properties:
+        priceAlerts:
+          type: boolean
+          example: true
+        marketNews:
+          type: boolean
+          example: true
+        dailySummary:
+          type: boolean
+          example: false
