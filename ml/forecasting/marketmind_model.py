@@ -12,17 +12,18 @@ Feature groups (the 20/50-day SMA crossover is dashboard-only, so it is NOT a fe
   sentiment FinBERT news scores (only when --news is given)
 
 Install:  pip install yfinance pandas numpy scikit-learn xgboost joblib
-Run:      python marketmind_model.py                        NVDA, all feature groups, signal + report
-          python marketmind_model.py --experiments          which data actually helps? (start here)
-          python marketmind_model.py --news news_scored_all.csv NVDA + FinBERT sentiment features
-          python marketmind_model.py --target excess        predict beating the S&P 500 instead of "up"
-          python marketmind_model.py --all                  all stocks in ALL_TICKERS
+Run:      python ml/forecasting/marketmind_model.py                        NVDA, all feature groups, signal + report
+          python ml/forecasting/marketmind_model.py --experiments          which data actually helps? (start here)
+          python ml/forecasting/marketmind_model.py --news data/processed/news_scored_all.csv NVDA + FinBERT sentiment features
+          python ml/forecasting/marketmind_model.py --target excess        predict beating the S&P 500 instead of "up"
+          python ml/forecasting/marketmind_model.py --all                  all stocks in ALL_TICKERS
 
-example: python marketmind_model.py AAPL GOOGL MSFT AMD TSLA NVDA --news news_scored_all.csv
+example: python ml/forecasting/marketmind_model.py AAPL GOOGL MSFT AMD TSLA NVDA --news data/processed/news_scored_all.csv
 """
 import argparse
 import json
 import logging
+from pathlib import Path
 
 import joblib
 import numpy as np
@@ -36,7 +37,13 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from xgboost import XGBClassifier
 
-logging.basicConfig(filename="marketmind.log", level=logging.INFO,
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+LOG_DIR = PROJECT_ROOT / "logs"
+MODEL_DIR = PROJECT_ROOT / "artifacts" / "models"
+PREDICTION_DIR = PROJECT_ROOT / "artifacts" / "predictions"
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+logging.basicConfig(filename=LOG_DIR / "marketmind.log", level=logging.INFO,
                     format="%(asctime)s %(levelname)s %(message)s")  # "track all events and history"
 log = logging.getLogger("marketmind")
 pd.set_option("display.width", 200)          # stop pandas hiding columns in the printed tables
@@ -353,7 +360,8 @@ def predict_signals(tickers, start="2020-01-01", news_csv=None, target="target",
     ret_col = "future_excess" if excess else "future_ret"
     fit = (panel[ret_col].abs().values >= dead_zone)
     final = get_models()["xgboost"].fit(panel.loc[fit, feats], panel.loc[fit, target])
-    joblib.dump({"model": final, "features": feats, "target": target}, "marketmind_model.joblib")
+    MODEL_DIR.mkdir(parents=True, exist_ok=True)
+    joblib.dump({"model": final, "features": feats, "target": target}, MODEL_DIR / "marketmind_model.joblib")
     p_pos = final.predict_proba(latest[feats])[:, 1]
 
     up, down = ("OUTPERFORM", "UNDERPERFORM") if excess else ("UP", "DOWN")
@@ -380,7 +388,8 @@ def predict_signals(tickers, start="2020-01-01", news_csv=None, target="target",
             sig["note"] = f"news data ends {news_end[t].date()}; no fresh sentiment for this signal"
         signals.append(sig)
 
-    with open("marketmind_signals.json", "w") as f:
+    PREDICTION_DIR.mkdir(parents=True, exist_ok=True)
+    with open(PREDICTION_DIR / "marketmind_signals.json", "w") as f:
         json.dump(signals, f, indent=2)
     log.info("wrote %d signals", len(signals))
 

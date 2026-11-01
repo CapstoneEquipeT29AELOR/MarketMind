@@ -216,3 +216,19 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# MarketMind organized layout
+node_modules/
+.next/
+.env.*
+!.env.example
+/data/raw/*
+!/data/raw/README.md
+/data/processed/*.csv
+!/data/processed/news_scored_all.csv
+/artifacts/models/*
+!/artifacts/models/README.md
+/artifacts/predictions/*
+!/artifacts/predictions/README.md
+/logs/*
+!/logs/README.md

@@ -5,10 +5,10 @@ Reads a big news CSV (e.g. FNSPID), keeps only your tickers/dates, scores each
 headline with FinBERT, and writes a small CSV that marketmind_model.py can load.
 
 Usage:
-  python finbert_sentiment.py fnspid_news.csv --since 2020-01-01 --out news_scored_all.csv
+  python ml/sentiment/finbert_sentiment.py fnspid_news.csv --since 2020-01-01 --out data/processed/news_scored_all.csv
 
 example:
-  python finbert_sentiment.py "C:/Users/andyj/Downloads/nasdaq_exteral_data.csv" --tickers AAPL GOOGL MSFT AMD TSLA NVDA --out news_scored_all.csv
+  python ml/sentiment/finbert_sentiment.py "C:/Users/andyj/Downloads/nasdaq_exteral_data.csv" --tickers AAPL GOOGL MSFT AMD TSLA NVDA --out data/processed/news_scored_all.csv
   nasdaq_exteral_data.csv is the dataset where there is all the news regarding FNSPID: https://huggingface.co/datasets/1ceyyu/FNSPID
   You will need to download it (28gb)
 
@@ -18,6 +18,7 @@ Output columns: date, ticker, score, positive, negative, neutral, headline
 Install: pip install [see requirements.txt file]
 """
 import argparse
+from pathlib import Path
 
 import pandas as pd
 
@@ -75,7 +76,7 @@ if __name__ == "__main__":
     ap.add_argument("--text-col", default="Article_title")
     ap.add_argument("--ticker-col", default="Stock_symbol")
     ap.add_argument("--per-day-cap", type=int, default=5, help="max headlines per ticker per day (0 = no cap)")
-    ap.add_argument("--out", default="news_scored.csv")
+    ap.add_argument("--out", default=str(Path(__file__).resolve().parents[2] / "data" / "processed" / "news_scored.csv"))
     a = ap.parse_args()
 
     news = load_news(a.news_csv, a.tickers, pd.Timestamp(a.since), pd.Timestamp(a.until),
@@ -84,5 +85,7 @@ if __name__ == "__main__":
     scores = score_texts(news["text"].tolist())
     result = pd.concat([news[["date", "ticker", "text"]], scores], axis=1).rename(columns={"text": "headline"})
     result["score"] = result["positive"] - result["negative"]
-    result[["date", "ticker", "score", "positive", "negative", "neutral", "headline"]].to_csv(a.out, index=False)
-    print(f"Saved {a.out}")
+    output = Path(a.out).expanduser()
+    output.parent.mkdir(parents=True, exist_ok=True)
+    result[["date", "ticker", "score", "positive", "negative", "neutral", "headline"]].to_csv(output, index=False)
+    print(f"Saved {output}")

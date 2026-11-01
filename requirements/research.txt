@@ -1,0 +1,4 @@
+# Include the existing ML dependencies plus the notebook/plotting tools.
+-r required_libraries.txt
+matplotlib
+jupyter
