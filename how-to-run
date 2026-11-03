@@ -1,0 +1,9 @@
+The tests; run these commands in the terminal : 
+
+    - .\.venv312\Scripts\python.exe -m pip install -r requirements/collection.txt        (timezone dependencies)
+
+    - .\.venv312\Scripts\python.exe scripts/demo_collection.py                (running preview)
+
+    - .\.venv312\Scripts\python.exe scripts/demo_collection.py --apply-cleanup     (cleaning data)
+
+    - .\.venv312\Scripts\python.exe -m unittest discover -s tests/unit -p test_collection_buffer.py -v (running test)

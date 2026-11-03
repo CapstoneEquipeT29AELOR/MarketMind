@@ -1,0 +1,10 @@
+{
+  "tickers": ["NVDA"],
+  "interval": "1m",
+  "day_mode": "calendar",
+  "exchange_timezone": "America/New_York",
+  "before_days": 3,
+  "after_days": 3,
+  "grace_days": 2,
+  "required_news_sources": ["sample-news"]
+}

@@ -1,0 +1,731 @@
+# MarketMind Step 2: sample storage and rolling buffer
+
+This is an additive package. Copy backend/, config/, scripts/, requirements/,
+and tests/ from this package into the existing MarketMind root, preserving the
+folder names. Merge directories; do not replace or delete the existing folders.
+These files do not replace the forecasting scripts or the root requirements.txt.
+If you already created a file with the same name locally, compare it before
+replacing it. The original organized project had none of these source files.
+
+## Files and responsibilities
+
+| File | Responsibility |
+| --- | --- |
+| backend/database/collection_store.py | Initial SQLite schema, validated market bars, duplicate prevention, manually protected ranges, and completed news coverage |
+| backend/services/buffer_service.py | Conservative calendar-day cleanup preview and optional sample deletion |
+| config/collection.json | Tracked stocks, time zone, interval, retention lengths, and required sample news sources |
+| scripts/demo_collection.py | Offline demonstration using three fictional one-minute bars per stock and a fixed clock |
+| requirements/collection.txt | tzdata dependency for exchange time zones on Windows |
+| tests/unit/test_collection_buffer.py | 26 automated tests, including the demo rerun checks |
+
+For easier copying, the first schema is embedded in collection_store.py. This
+is an initial sample schema, not a production migration framework. It will need
+versioned migrations as the later tables and provider-specific records are added.
+
+## Install and run (Windows PowerShell, project root)
+
+Run each command separately. These are terminal commands, not file contents.
+
+```powershell
+.\.venv312\Scripts\python.exe -m pip install -r requirements/collection.txt
+```
+
+```powershell
+.\.venv312\Scripts\python.exe scripts/demo_collection.py
+```
+
+With the original NVDA configuration, the demo prints:
+
+```text
+SAMPLE database: <your local application data folder>/MarketMind/step2_sample.sqlite3
+After replay: 3 bars (before replay: 3)
+NVDA simulated outage: News coverage unavailable: sample-news
+NVDA eligible dates: ['2026-10-05']
+NVDA deleted: 0
+Remaining bars: 3
+October 12 is protected; October 19 is still in the temporary buffer.
+```
+
+This is a preview: no observations are removed. To test deletion in the dedicated
+sample database, run:
+
+```powershell
+.\.venv312\Scripts\python.exe scripts/demo_collection.py --apply-cleanup
+```
+
+It should report one deleted observation and two remaining observations. Running
+again is safe: replay does not create duplicate rows. A bar previously purged by
+cleanup can be reinserted by this deliberate sample replay and cleaned again;
+there are never two stored observations with the same unique key. Real provider
+checkpoints and avoiding unnecessary re-fetches belong to later steps.
+
+Run the supplied tests:
+
+```powershell
+.\.venv312\Scripts\python.exe -m unittest discover -s tests/unit -p test_collection_buffer.py -v
+```
+
+## How it works
+
+The unique observation key is ticker + UTC bar-start timestamp + interval + price
+basis. Equivalent time-zone representations normalize to the same timestamp.
+Replaying identical data returns False without changing the original received_at.
+Conflicting prices or providers raise an error instead of silently overwriting
+history. Correction/version storage is deferred; connect only one canonical feed
+per observation identity until that is implemented.
+
+All observations live in one table. retention_holds contains protected time
+ranges: start inclusive, end exclusive. Overlapping holds reference the same
+underlying observations through range queries; they do not copy the prices.
+Holds can expand but cannot shrink through the current API.
+
+With before_days=3 and grace_days=2, the buffer preserves the previous five full
+exchange-local calendar dates plus today. Older bars are candidates, not automatic
+deletions. The cleanup checks every configured news source, any relevant holds,
+and the publication dates of all possible events that could protect each bar.
+For a bar on date D, that publication range is D-after_days through D+before_days,
+including the final date in full. This protects the last portion of a day's news
+and avoids confusing a partial day's scan with complete coverage.
+
+Coverage ranges can expand only through overlapping or adjoining successful
+scans; they cannot skip gaps. Missing coverage and marked source failures block
+cleanup. Do not call record_news_scan merely because an HTTP request returned:
+all pages for that range must be persisted, classified, and have any necessary
+holds in place first. These checks are simulated in the demo; no providers exist
+yet. A provider outage is never recorded as an empty successful news scan.
+
+Cleanup checks protections and deletes in the same BEGIN IMMEDIATE transaction.
+A failed deletion rolls back the whole cleanup operation. A retention preview
+does not authorize a later blind deletion: applying cleanup recalculates the
+candidates in its own transaction.
+
+## Sample assumptions and limits
+
+- No API calls, API keys, real news classification, or automatic collector.
+- Only finalized, minute-aligned 1m bars; unsupported intervals raise an error.
+- All configured sample stocks share exchange_timezone in this first version.
+- Calendar-day mode only. Selecting trading-day mode raises an explicit error;
+  an exchange calendar and actual market-session coverage come later.
+- The fixed demo clock is October 20, 2026; dates/prices are synthetic.
+- The demo hold is manually specified for October 9 through October 15 inclusive
+  in New York time. It demonstrates protection, not automatic event detection.
+- No prices are synthesized for missing minutes, weekends, or holidays.
+- The demo always uses step2_sample.sqlite3 under LOCALAPPDATA/MarketMind (or
+  ~/.local/share/MarketMind on systems without LOCALAPPDATA), outside the repo.
+- Do not use this demo to write to an actual production database. A runtime
+  database setting, provider credentials, coverage verification, and scheduling
+  belong to the provider-integration stage.
+- Story matching, source attribution, pending/complete/missing-data event
+  lifecycle, automatic backfill, revision history, and training exports are not
+  implemented. Manual holds provide the cleanup protection until those exist.
+- The existing FinBERT/XGBoost scripts remain separate and unchanged.
+
+## Tests completed
+
+The supplied 26 tests passed in the execution environment. They cover duplicate
+replays, conflicting data, equivalent timestamps, original receipt times, missing
+and failed news coverage, recovery, all-source requirements, gaps, grace and date
+boundaries, daylight-saving transitions, overlapping/pre-existing holds, other
+tickers, persistence after reopening, preview-only cleanup, rollback on simulated
+failure, invalid configuration, and repeated preview/apply demo runs. They do not
+establish live provider behavior or semantic story-deduplication accuracy.
+
+## Git ignore additions
+
+Append these lines to your existing .gitignore; keep its current contents:
+
+```gitignore
+.venv312/
+*.sqlite3
+*.sqlite3-journal
+*.sqlite3-wal
+*.sqlite3-shm
+```
+
+Stop after this sample-data step. Provider integration is Step 3.
+
+
+
+FILE: requirements/collection.txt
+
+# Timezone database required by zoneinfo on Windows.
+tzdata
+
+
+
+FILE: config/collection.json
+
+{
+  "tickers": ["NVDA"],
+  "interval": "1m",
+  "day_mode": "calendar",
+  "exchange_timezone": "America/New_York",
+  "before_days": 3,
+  "after_days": 3,
+  "grace_days": 2,
+  "required_news_sources": ["sample-news"]
+}
+
+
+
+FILE: backend/database/collection_store.py
+
+"""Step 2: local sample storage. No provider requests or story classification."""
+
+import json
+import math
+import sqlite3
+from contextlib import contextmanager
+from datetime import datetime, timezone
+from pathlib import Path
+
+
+def utc(value):
+    moment = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if moment.tzinfo is None or moment.utcoffset() is None:
+        raise ValueError("Timestamps must include a timezone, e.g. ...Z.")
+    return moment.astimezone(timezone.utc).isoformat(timespec="microseconds")
+
+
+class CollectionStore:
+    def __init__(self, path):
+        Path(path).parent.mkdir(parents=True, exist_ok=True)
+        self.db = sqlite3.connect(path, isolation_level=None, timeout=10)
+        self.db.row_factory = sqlite3.Row
+        self.db.execute("PRAGMA foreign_keys = ON")
+        self.db.executescript("""
+            CREATE TABLE IF NOT EXISTS observations (
+                id INTEGER PRIMARY KEY,
+                ticker TEXT NOT NULL,
+                timestamp TEXT NOT NULL,
+                interval TEXT NOT NULL,
+                price_basis TEXT NOT NULL,
+                provider TEXT NOT NULL,
+                ohlcv TEXT NOT NULL,
+                received_at TEXT NOT NULL,
+                UNIQUE(ticker, timestamp, interval, price_basis)
+            );
+            CREATE TABLE IF NOT EXISTS retention_holds (
+                hold_id TEXT PRIMARY KEY,
+                ticker TEXT NOT NULL,
+                start_at TEXT NOT NULL,
+                end_at TEXT NOT NULL,
+                CHECK(start_at < end_at)
+            );
+            CREATE INDEX IF NOT EXISTS holds_by_ticker
+                ON retention_holds(ticker, start_at, end_at);
+            CREATE TABLE IF NOT EXISTS news_coverage (
+                ticker TEXT NOT NULL,
+                source TEXT NOT NULL,
+                start_at TEXT NOT NULL,
+                through_at TEXT NOT NULL,
+                healthy INTEGER NOT NULL CHECK(healthy IN (0, 1)),
+                CHECK(start_at < through_at),
+                PRIMARY KEY(ticker, source)
+            );
+        """)
+
+    @contextmanager
+    def transaction(self):
+        self.db.execute("BEGIN IMMEDIATE")
+        try:
+            yield
+            self.db.commit()
+        except BaseException:
+            self.db.rollback()
+            raise
+
+    def add_bar(self, ticker, timestamp, values, *, provider="sample",
+                interval="1m", price_basis="unadjusted", received_at=None):
+        # This first version accepts finalized one-minute bars only.
+        if interval != "1m":
+            raise ValueError("Step 2 supports finalized 1m sample bars only.")
+        ticker = ticker.strip().upper()
+        if not ticker or not provider or price_basis not in {"unadjusted", "adjusted"}:
+            raise ValueError("Invalid ticker, provider, or price basis.")
+        timestamp = utc(timestamp)
+        moment = datetime.fromisoformat(timestamp)
+        if moment.second or moment.microsecond:
+            raise ValueError("Bar timestamps must be aligned to a minute.")
+        names = ("open", "high", "low", "close", "volume")
+        prices = {name: float(values[name]) for name in names}
+        if not all(math.isfinite(value) for value in prices.values()):
+            raise ValueError("OHLCV values must be finite.")
+        if not (0 < prices["low"] <= min(prices["open"], prices["close"])
+                <= max(prices["open"], prices["close"]) <= prices["high"]
+                and prices["volume"] >= 0):
+            raise ValueError("Invalid OHLCV values.")
+        payload = json.dumps(prices, sort_keys=True, allow_nan=False)
+        key = (ticker, timestamp, interval, price_basis)
+        received = utc(received_at or datetime.now(timezone.utc).isoformat())
+        with self.transaction():
+            previous = self.db.execute("""
+                SELECT provider, ohlcv FROM observations
+                WHERE ticker=? AND timestamp=? AND interval=? AND price_basis=?
+            """, key).fetchone()
+            if previous:
+                if previous["provider"] != provider or previous["ohlcv"] != payload:
+                    raise ValueError("Conflicting bar; revision handling comes later.")
+                return False
+            self.db.execute("""
+                INSERT INTO observations
+                (ticker,timestamp,interval,price_basis,provider,ohlcv,received_at)
+                VALUES (?,?,?,?,?,?,?)
+            """, (*key, provider, payload, received))
+        return True
+
+    def protect_range(self, hold_id, ticker, start, end):
+        # Manual sample holds; automatic story windows come in Step 5.
+        ticker, start, end = ticker.upper(), utc(start), utc(end)
+        if not hold_id or start >= end:
+            raise ValueError("A hold needs an ID and a valid time range.")
+        with self.transaction():
+            previous = self.db.execute(
+                "SELECT ticker FROM retention_holds WHERE hold_id=?", (hold_id,)
+            ).fetchone()
+            if previous and previous["ticker"] != ticker:
+                raise ValueError("A hold ID cannot change its ticker.")
+            self.db.execute("""
+                INSERT INTO retention_holds VALUES (?,?,?,?)
+                ON CONFLICT(hold_id) DO UPDATE SET
+                    start_at=MIN(start_at, excluded.start_at),
+                    end_at=MAX(end_at, excluded.end_at)
+            """, (hold_id, ticker, start, end))
+
+    def record_news_scan(self, ticker, source, start, through):
+        # Call only after ALL pages are collected AND classified for this range.
+        ticker, start, through = ticker.upper(), utc(start), utc(through)
+        if not source or start >= through:
+            raise ValueError("Invalid completed news scan.")
+        with self.transaction():
+            previous = self.db.execute("""
+                SELECT * FROM news_coverage WHERE ticker=? AND source=?
+            """, (ticker, source)).fetchone()
+            if previous:
+                if start > previous["through_at"] or through < previous["start_at"]:
+                    raise ValueError("Coverage has a gap; recover it before advancing.")
+                if not previous["healthy"] and (
+                    start > previous["through_at"] or through < previous["through_at"]
+                ):
+                    raise ValueError("Recovery must scan through the old checkpoint.")
+                start = min(start, previous["start_at"])
+                through = max(through, previous["through_at"])
+            self.db.execute("""
+                INSERT INTO news_coverage VALUES (?,?,?,?,1)
+                ON CONFLICT(ticker,source) DO UPDATE SET
+                    start_at=excluded.start_at,
+                    through_at=excluded.through_at, healthy=1
+            """, (ticker, source, start, through))
+
+    def record_news_failure(self, ticker, source):
+        # A missing source row also blocks cleanup, so no row needs inventing.
+        with self.transaction():
+            self.db.execute("""
+                UPDATE news_coverage SET healthy=0 WHERE ticker=? AND source=?
+            """, (ticker.upper(), source))
+
+    def count(self):
+        return self.db.execute("SELECT COUNT(*) FROM observations").fetchone()[0]
+
+    def close(self):
+        self.db.close()
+
+
+
+FILE: backend/services/buffer_service.py
+
+"""Conservative calendar-day cleanup for the sample collection database."""
+
+from datetime import datetime, time, timedelta
+from zoneinfo import ZoneInfo
+
+from backend.database.collection_store import utc
+
+
+def cleanup_buffer(store, ticker, now, settings, *, apply=False):
+    # Only sample-tested calendar-day mode is enabled at this stage.
+    if settings.get("day_mode") != "calendar":
+        raise ValueError("Trading-day mode needs an exchange calendar in Step 5.")
+    before = settings["before_days"]
+    after = settings["after_days"]
+    grace = settings["grace_days"]
+    if any(type(n) is not int or n < 0 for n in (before, after, grace)):
+        raise ValueError("Retention days must be non-negative integers.")
+    sources = settings["required_news_sources"]
+    if not isinstance(sources, list) or not sources or not all(
+        isinstance(source, str) and source.strip() for source in sources
+    ):
+        raise ValueError("At least one required news source is necessary.")
+    ticker = ticker.upper()
+    zone = ZoneInfo(settings["exchange_timezone"])
+    today = datetime.fromisoformat(utc(now)).astimezone(zone).date()
+    cutoff_date = today - timedelta(days=before + grace)
+
+    def midnight(day):
+        return utc(datetime.combine(day, time.min, tzinfo=zone).isoformat())
+
+    # Hold the write lock while checking protections and applying deletions.
+    with store.transaction():
+        coverage = []
+        for source in set(sources):
+            row = store.db.execute("""
+                SELECT * FROM news_coverage WHERE ticker=? AND source=?
+            """, (ticker, source)).fetchone()
+            if row is None or not row["healthy"]:
+                return {"eligible": [], "deleted": 0,
+                        "blocked": f"News coverage unavailable: {source}"}
+            coverage.append(row)
+
+        rows = store.db.execute("""
+            SELECT o.id, o.timestamp FROM observations AS o
+            WHERE o.ticker=? AND o.timestamp < ?
+              AND NOT EXISTS (
+                SELECT 1 FROM retention_holds AS h
+                WHERE h.ticker=o.ticker
+                  AND h.start_at<=o.timestamp AND o.timestamp<h.end_at
+              )
+            ORDER BY o.timestamp
+        """, (ticker, midnight(cutoff_date))).fetchall()
+
+        eligible = []
+        for row in rows:
+            day = datetime.fromisoformat(row["timestamp"]).astimezone(zone).date()
+            # All event dates that could protect this bar must have been scanned.
+            required_start = midnight(day - timedelta(days=after))
+            required_end = midnight(day + timedelta(days=before + 1))
+            if all(c["start_at"] <= required_start
+                   and c["through_at"] >= required_end for c in coverage):
+                eligible.append(dict(row))
+
+        if apply:
+            store.db.executemany(
+                "DELETE FROM observations WHERE id=?",
+                [(row["id"],) for row in eligible],
+            )
+        return {"eligible": eligible, "deleted": len(eligible) if apply else 0,
+                "blocked": None}
+
+
+
+FILE: scripts/demo_collection.py
+
+"""Offline Step 2 demo. Writes only a dedicated sample database."""
+
+import argparse
+import json
+import os
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from backend.database.collection_store import CollectionStore
+from backend.services.buffer_service import cleanup_buffer
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--apply-cleanup", action="store_true")
+    args = parser.parse_args()
+    settings = json.loads((ROOT / "config/collection.json").read_text(encoding="utf-8-sig"))
+    base = Path(os.environ.get("LOCALAPPDATA", str(Path.home() / ".local/share")))
+    path = base / "MarketMind" / "step2_sample.sqlite3"
+    print(f"SAMPLE database: {path}")
+    store = CollectionStore(path)
+    try:
+        # Fictional prices and a fixed clock make the example repeatable.
+        prices = {"open": 100, "high": 102, "low": 99, "close": 101, "volume": 500}
+        for ticker in settings["tickers"]:
+            for day in (5, 12, 19):
+                store.add_bar(ticker, f"2026-10-{day:02d}T14:30:00Z", prices,
+                              interval=settings["interval"],
+                              received_at="2026-10-20T16:00:00Z")
+        before = store.count()
+        for ticker in settings["tickers"]:
+            for day in (5, 12, 19):
+                store.add_bar(ticker, f"2026-10-{day:02d}T14:30:00Z", prices,
+                              interval=settings["interval"])
+        print(f"After replay: {store.count()} bars (before replay: {before})")
+
+        now = "2026-10-20T16:00:00Z"
+        for ticker in settings["tickers"]:
+            store.protect_range(f"sample-event-{ticker}", ticker,
+                                "2026-10-09T00:00:00-04:00",
+                                "2026-10-16T00:00:00-04:00")
+            # An explicit synthetic success record; no API request is made.
+            store.record_news_scan(ticker, "sample-news",
+                                   "2026-10-01T00:00:00Z", now)
+            store.record_news_failure(ticker, "sample-news")
+            blocked = cleanup_buffer(store, ticker, now, settings)
+            print(f"{ticker} simulated outage: {blocked['blocked']}")
+            store.record_news_scan(ticker, "sample-news",
+                                   "2026-10-01T00:00:00Z",
+                                   "2026-10-20T16:01:00Z")
+            result = cleanup_buffer(store, ticker, "2026-10-20T16:01:00Z",
+                                    settings, apply=args.apply_cleanup)
+            print(f"{ticker} eligible dates: {[r['timestamp'][:10] for r in result['eligible']]}")
+            print(f"{ticker} deleted: {result['deleted']}")
+        print(f"Remaining bars: {store.count()}")
+        print("October 12 is protected; October 19 is still in the temporary buffer.")
+    finally:
+        store.close()
+
+
+if __name__ == "__main__":
+    main()
+
+
+
+FILE: tests/unit/test_collection_buffer.py
+
+import copy
+import json
+import os
+from pathlib import Path
+import sqlite3
+import subprocess
+import sys
+import tempfile
+import unittest
+
+from backend.database.collection_store import CollectionStore
+from backend.services.buffer_service import cleanup_buffer
+
+
+ROOT = Path(__file__).resolve().parents[2]
+PRICES = {"open": 100, "high": 102, "low": 99, "close": 101, "volume": 500}
+NOW = "2026-10-20T16:00:00Z"
+
+
+class BufferTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.path = Path(self.temp.name) / "sample.sqlite3"
+        self.store = CollectionStore(self.path)
+        self.settings = json.loads((ROOT / "config/collection.json").read_text())
+
+    def tearDown(self):
+        self.store.close()
+        self.temp.cleanup()
+
+    def add(self, day=5, ticker="NVDA", **kwargs):
+        return self.store.add_bar(ticker, f"2026-10-{day:02d}T14:30:00Z", PRICES, **kwargs)
+
+    def covered(self, ticker="NVDA", source="sample-news", start="2026-10-01T00:00:00Z", end=NOW):
+        self.store.record_news_scan(ticker, source, start, end)
+
+    def clean(self, apply=False, now=NOW):
+        return cleanup_buffer(self.store, "NVDA", now, self.settings, apply=apply)
+
+    def test_identical_ingestion_is_idempotent(self):
+        self.assertTrue(self.add())
+        self.assertFalse(self.add())
+        self.assertEqual(self.store.count(), 1)
+
+    def test_equivalent_timezone_timestamps_are_one_observation(self):
+        self.add()
+        inserted = self.store.add_bar("nvda", "2026-10-05T10:30:00-04:00", PRICES)
+        self.assertFalse(inserted)
+        self.assertEqual(self.store.count(), 1)
+
+    def test_first_discovery_time_survives_replay(self):
+        self.add(received_at="2026-10-05T14:31:00Z")
+        self.add(received_at=NOW)
+        received = self.store.db.execute("SELECT received_at FROM observations").fetchone()[0]
+        self.assertTrue(received.startswith("2026-10-05T14:31:00"))
+
+    def test_conflicting_price_does_not_replace_history(self):
+        self.add()
+        changed = {**PRICES, "close": 102}
+        with self.assertRaisesRegex(ValueError, "Conflicting"):
+            self.store.add_bar("NVDA", "2026-10-05T14:30:00Z", changed)
+        payload = self.store.db.execute("SELECT ohlcv FROM observations").fetchone()[0]
+        self.assertEqual(json.loads(payload)["close"], 101)
+        self.assertEqual(self.store.count(), 1)
+
+    def test_provider_conflict_does_not_mix_feeds(self):
+        self.add()
+        with self.assertRaisesRegex(ValueError, "Conflicting"):
+            self.add(provider="another-feed")
+
+    def test_price_bases_are_separate_observations(self):
+        self.add()
+        self.add(price_basis="adjusted")
+        self.assertEqual(self.store.count(), 2)
+
+    def test_rejects_naive_timestamps_and_bad_prices(self):
+        with self.assertRaises(ValueError):
+            self.store.add_bar("NVDA", "2026-10-05T14:30:00", PRICES)
+        for bad in [float("nan"), float("inf"), -1, 999]:
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                self.store.add_bar("NVDA", "2026-10-05T14:30:00Z", {**PRICES, "close": bad})
+        self.assertEqual(self.store.count(), 0)
+
+    def test_rejects_unsupported_interval_and_non_aligned_bars(self):
+        with self.assertRaises(ValueError):
+            self.add(interval="5m")
+        with self.assertRaises(ValueError):
+            self.store.add_bar("NVDA", "2026-10-05T14:30:01Z", PRICES)
+
+    def test_missing_coverage_blocks_cleanup(self):
+        self.add()
+        result = self.clean(apply=True)
+        self.assertIsNotNone(result["blocked"])
+        self.assertEqual(self.store.count(), 1)
+
+    def test_failure_blocks_deletion_without_advancing_coverage(self):
+        self.add()
+        self.covered()
+        previous = self.store.db.execute("SELECT through_at FROM news_coverage").fetchone()[0]
+        self.store.record_news_failure("NVDA", "sample-news")
+        result = self.clean(apply=True)
+        self.assertIsNotNone(result["blocked"])
+        self.assertEqual(self.store.count(), 1)
+        self.assertEqual(previous, self.store.db.execute("SELECT through_at FROM news_coverage").fetchone()[0])
+
+    def test_incomplete_recovery_does_not_clear_outage(self):
+        self.add()
+        self.covered()
+        self.store.record_news_failure("NVDA", "sample-news")
+        with self.assertRaises(ValueError):
+            self.covered(end="2026-10-10T00:00:00Z")
+        self.assertIsNotNone(self.clean(apply=True)["blocked"])
+        self.assertEqual(self.store.count(), 1)
+
+    def test_full_successful_rescan_unblocks_cleanup(self):
+        self.add()
+        self.covered()
+        self.store.record_news_failure("NVDA", "sample-news")
+        self.covered()
+        self.assertEqual(self.clean(apply=True)["deleted"], 1)
+
+    def test_every_configured_source_must_be_covered(self):
+        self.add()
+        self.covered()
+        self.settings["required_news_sources"].append("second-source")
+        self.assertIsNotNone(self.clean(apply=True)["blocked"])
+        self.covered(source="second-source")
+        self.assertEqual(self.clean(apply=True)["deleted"], 1)
+
+    def test_scan_cannot_skip_a_gap(self):
+        self.covered(end="2026-10-06T00:00:00Z")
+        with self.assertRaisesRegex(ValueError, "gap"):
+            self.covered(start="2026-10-07T00:00:00Z")
+        end = self.store.db.execute("SELECT through_at FROM news_coverage").fetchone()[0]
+        self.assertTrue(end.startswith("2026-10-06"))
+
+    def test_insufficient_history_and_future_news_coverage_prevent_deletion(self):
+        self.add()
+        self.covered(start="2026-10-04T00:00:00Z", end="2026-10-08T00:00:00Z")
+        self.assertEqual(self.clean(apply=True)["deleted"], 0)
+        # Complete the past, but still miss the last possible event day's end.
+        self.covered(start="2026-10-01T00:00:00Z", end="2026-10-09T03:59:00Z")
+        self.assertEqual(self.clean(apply=True)["deleted"], 0)
+        self.covered(start="2026-10-09T03:59:00Z", end="2026-10-09T04:00:00Z")
+        self.assertEqual(self.clean(apply=True)["deleted"], 1)
+
+    def test_buffer_preserves_five_full_days_and_today(self):
+        for day in (14, 15, 19, 20):
+            self.add(day)
+        self.covered()
+        result = self.clean(apply=True)
+        self.assertEqual([r["timestamp"][:10] for r in result["eligible"]], ["2026-10-14"])
+        self.assertEqual(self.store.count(), 3)
+
+    def test_dry_run_does_not_delete(self):
+        self.add()
+        self.covered()
+        result = self.clean()
+        self.assertEqual(len(result["eligible"]), 1)
+        self.assertEqual(result["deleted"], 0)
+        self.assertEqual(self.store.count(), 1)
+
+    def test_overlapping_holds_share_one_bar(self):
+        self.add()
+        self.covered()
+        self.store.protect_range("a", "NVDA", "2026-10-04T00:00:00Z", "2026-10-06T00:00:00Z")
+        self.store.protect_range("b", "NVDA", "2026-10-05T00:00:00Z", "2026-10-07T00:00:00Z")
+        self.store.protect_range("a", "NVDA", "2026-10-04T00:00:00Z", "2026-10-06T00:00:00Z")
+        self.assertEqual(self.clean(apply=True)["deleted"], 0)
+        self.assertEqual(self.store.count(), 1)
+        self.assertEqual(self.store.db.execute("SELECT COUNT(*) FROM retention_holds").fetchone()[0], 2)
+
+    def test_hold_created_before_bar_arrives_protects_it(self):
+        self.store.protect_range("future", "NVDA", "2026-10-05T00:00:00Z", "2026-10-06T00:00:00Z")
+        self.add()
+        self.covered()
+        self.assertEqual(self.clean(apply=True)["deleted"], 0)
+
+    def test_hold_cannot_shrink_or_change_ticker(self):
+        self.add()
+        self.covered()
+        self.store.protect_range("a", "NVDA", "2026-10-04T00:00:00Z", "2026-10-07T00:00:00Z")
+        self.store.protect_range("a", "NVDA", "2026-10-06T00:00:00Z", "2026-10-07T00:00:00Z")
+        self.assertEqual(self.clean(apply=True)["deleted"], 0)
+        with self.assertRaises(ValueError):
+            self.store.protect_range("a", "AAPL", "2026-10-04T00:00:00Z", "2026-10-07T00:00:00Z")
+
+    def test_other_tickers_are_not_deleted(self):
+        self.add(ticker="AAPL")
+        self.add(ticker="NVDA")
+        self.covered()
+        self.assertEqual(self.clean(apply=True)["deleted"], 1)
+        self.assertEqual(self.store.db.execute("SELECT ticker FROM observations").fetchone()[0], "AAPL")
+
+    def test_transaction_rolls_back_partial_cleanup(self):
+        self.add(5)
+        self.add(6)
+        self.covered()
+        self.store.db.execute("""
+            CREATE TEMP TRIGGER fail_second BEFORE DELETE ON observations
+            WHEN OLD.timestamp LIKE '2026-10-06%'
+            BEGIN SELECT RAISE(ABORT, 'simulated interruption'); END
+        """)
+        with self.assertRaises(sqlite3.IntegrityError):
+            self.clean(apply=True)
+        self.assertEqual(self.store.count(), 2)
+
+    def test_reopen_preserves_data_holds_and_coverage(self):
+        self.add()
+        self.covered()
+        self.store.protect_range("a", "NVDA", "2026-10-04T00:00:00Z", "2026-10-06T00:00:00Z")
+        self.store.close()
+        self.store = CollectionStore(self.path)
+        self.assertEqual(self.store.count(), 1)
+        self.assertFalse(self.add())
+        self.assertEqual(self.clean(apply=True)["deleted"], 0)
+
+    def test_calendar_cutoff_uses_exchange_timezone_across_dst(self):
+        self.store.add_bar("NVDA", "2026-10-29T03:59:00Z", PRICES)
+        self.store.add_bar("NVDA", "2026-10-29T04:00:00Z", PRICES)
+        self.covered(end="2026-11-03T16:00:00Z")
+        result = self.clean(apply=True, now="2026-11-03T16:00:00Z")
+        self.assertEqual(len(result["eligible"]), 1)
+        self.assertTrue(result["eligible"][0]["timestamp"].startswith("2026-10-29T03:59"))
+        self.assertEqual(self.store.count(), 1)
+
+    def test_bad_config_cannot_delete_data(self):
+        self.add()
+        self.covered()
+        for key, value in [("before_days", -1), ("grace_days", 1.5), ("day_mode", "trading"),
+                           ("required_news_sources", []), ("required_news_sources", "sample-news")]:
+            settings = copy.deepcopy(self.settings)
+            settings[key] = value
+            with self.subTest(key=key, value=value), self.assertRaises(ValueError):
+                cleanup_buffer(self.store, "NVDA", NOW, settings, apply=True)
+        self.assertEqual(self.store.count(), 1)
+
+    def test_demo_runs_twice_in_preview_and_apply_modes(self):
+        env = {**os.environ, "LOCALAPPDATA": self.temp.name}
+        for flags in [[], [], ["--apply-cleanup"], ["--apply-cleanup"]]:
+            result = subprocess.run([sys.executable, str(ROOT / "scripts/demo_collection.py"), *flags],
+                                    env=env, cwd=self.temp.name, text=True, capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertIn("After replay: 3 bars (before replay: 3)", result.stdout)
+            self.assertIn("NVDA eligible dates: ['2026-10-05']", result.stdout)
+            self.assertIn("Remaining bars: " + ("2" if flags else "3"), result.stdout)
+
+
+if __name__ == "__main__":
+    unittest.main()
