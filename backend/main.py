@@ -1,33 +1,42 @@
-#To run : .\.venv\Scripts\python.exe -m pip config debug
+from fastapi import FastAPI, Request
+from dotenv import load_dotenv
 
-from fastapi import FastAPI
-import sqlite3
+from utils import query_news_api
 
-app = FastAPI(
-    title="MarketMind API",
-    description="Backend for MarketMind's news and market analysis.",
-    version="0.1.0",
-)
+load_dotenv()
+app = FastAPI(title="MarketMind API", version="0.1.0")
 
-@app.on_event("startup")
-def on_startup():
-    # initializing the DB schema
-    conn = sqlite3.connect("marketmind.db")
-    cursor = conn.cursor()
-    cursor.execute(""" 
-        CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        email TEXT UNIQUE,
-        password TEXT NOT NULL
-    )
-    """) # change the statement to update the DB schema
 
-@app.get("/")
-def root():
-    return {"message": "Welcome to the MarketMind API"}
+@app.get("/api/stocks")
+async def list_stocks():
+    pass
 
-@app.get("/health")
-def health():
-    return {"status": "ok"}
+
+@app.get("/api/stocks/{symbol}/chart")
+async def get_stock_chart(symbol: str, range: str = "1M"):
+    pass
+
+
+@app.get("/api/news")
+async def get_news(query: str, from_date: str = None):
+    news = query_news_api(query, from_date)
+    return news, 200
+
+
+@app.get("/api/analysis/{symbol}")
+async def get_analysis(symbol: str):
+    # algorithm will be ran from here. If a BUY or SELL signal is produced for the day, return the signal to the user. 
+    pass
+
+
+@app.get("/api/preferences")
+async def get_preferences():
+    pass
+
+
+@app.put("/api/preferences")
+async def update_preferences(preferences: dict):
+    pass
+
+# Run with: uvicorn main:app --reload --port 8080
 
