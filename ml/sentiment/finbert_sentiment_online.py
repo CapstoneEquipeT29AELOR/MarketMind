@@ -94,7 +94,7 @@ if __name__ == "__main__":
     ap.add_argument("--since", default=None, help="finnhub only; default = 1 year ago")
     ap.add_argument("--until", default=None, help="finnhub only; default = today")
     ap.add_argument("--per-day-cap", type=int, default=5, help="max headlines per ticker per day (0 = no cap)")
-    ap.add_argument("--out", default=str(Path(__file__).resolve().parents[2] / "data" / "processed" / "news_scored.csv"))
+    ap.add_argument("--out", default=str(Path(__file__).resolve().parents[2] / "ml" / "sentiment" / "news_scored.csv"))
     a = ap.parse_args()
 
     today = pd.Timestamp.today().normalize()

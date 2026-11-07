@@ -38,9 +38,9 @@ from sklearn.preprocessing import StandardScaler
 from xgboost import XGBClassifier
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-LOG_DIR = PROJECT_ROOT / "logs"
-MODEL_DIR = PROJECT_ROOT / "artifacts" / "models"
-PREDICTION_DIR = PROJECT_ROOT / "artifacts" / "predictions"
+LOG_DIR = PROJECT_ROOT / "ml" / "logs"
+MODEL_DIR = PROJECT_ROOT / "ml" / "models"
+PREDICTION_DIR = PROJECT_ROOT / "ml" / "predictions"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 logging.basicConfig(filename=LOG_DIR / "marketmind.log", level=logging.INFO,
