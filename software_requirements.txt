@@ -1,3 +1,0 @@
-# Existing ML dependencies, collected under requirements/.
-# See requirements/README.md for research and future backend dependencies.
--r requirements/required_libraries.txt
