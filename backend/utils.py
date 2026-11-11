@@ -1,5 +1,7 @@
 import requests
+import yfinance
 import os
+import json
 from datetime import datetime
 
 def query_news_api(query: str, from_date: str) -> object:
@@ -15,3 +17,15 @@ def query_news_api(query: str, from_date: str) -> object:
     )
     res.raise_for_status()
     return res.json()
+
+def get_stock_price_json(symbol: str, period: str) -> object:
+    df = yfinance.download(symbol, period=period)
+    data = json.loads(df["Close"].to_json())
+    parsed = {}
+    kv = data[symbol].items()
+    for k,v in kv:
+        ts = int(k)
+        dt_obj = datetime.fromtimestamp(ts//1000)
+        dt_str = dt_obj.strftime("%Y-%m-%d")
+        parsed[dt_str] = data[symbol][k]
+    return parsed

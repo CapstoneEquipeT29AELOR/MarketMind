@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Request
 from dotenv import load_dotenv
 
-from utils import query_news_api
+from utils import query_news_api, get_stock_price_json
 
 load_dotenv()
 app = FastAPI(title="MarketMind API", version="0.1.0")
@@ -13,8 +13,9 @@ async def list_stocks():
 
 
 @app.get("/api/stocks/{symbol}/chart")
-async def get_stock_chart(symbol: str, range: str = "1M"):
-    pass
+async def get_stock_chart(symbol: str, range_: str = "1mo"):
+    # TODO: add parameter validation
+    return get_stock_price_json(symbol, range_)
 
 
 @app.get("/api/news")
