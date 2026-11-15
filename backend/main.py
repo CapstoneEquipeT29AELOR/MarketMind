@@ -21,13 +21,14 @@ async def list_stocks():
 
 
 @app.get("/api/stocks/{symbol}/chart")
-async def get_stock_chart(symbol: str, range_: str = "1mo"):
+async def get_stock_chart(symbol: str, timeline: str = "1mo"):
     # TODO: add parameter validation
-    return get_stock_price_json(symbol, range_)
+    return get_stock_price_json(symbol, timeline)
 
 
 @app.get("/api/news")
 def get_news(symbol: str | None = None, limit: int = Query(20, ge=1, le=50)):
+    print(symbol)
     """example use: Invoke-RestMethod "http://localhost:8080/api/news"  """
     return get_market_news(symbol, limit)
 
