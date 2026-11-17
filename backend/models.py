@@ -8,7 +8,7 @@ class StockLookupParams(BaseModel):
 
 class StockChartParams(BaseModel):
     symbol: str = symbol_schema
-    timeline: Literal['1d','5d','1mo', '6mo', '1y', '5y', 'ytd', 'max']
+    timeline: Literal['1d','5d','1mo', '6mo', '1y', '5y', 'ytd', 'max'] = '5d'
 
 class NewsParams(BaseModel):
     symbol: str = symbol_schema

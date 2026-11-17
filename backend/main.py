@@ -23,19 +23,25 @@ async def search_stocks(params: StockLookupParams):
 
 @app.post("/api/stocks/chart")
 async def get_stock_chart(params: StockChartParams):
-    return get_stock_price_json(params.symbol, params.timeline)
+    data = get_stock_price_json(params.symbol, params.timeline)
+    if data == {}:
+        raise HTTPException(status_code=400, detail=f"No data was found for the given stock: {params.symbol}")
+    return data
 
 
 @app.post("/api/stocks/news")
 def get_news(params: NewsParams):
-    return get_market_news(params.symbol, params.limit)
+    news = get_market_news(params.symbol, params.limit)
+    if len(news) == 0:
+        raise HTTPException(status_code=400, detail=f"No news were found for the given stock: {params.symbol}")
+    return news
 
 
 @app.post("/api/stocks/analysis")
 def get_analysis(params: AnalysisParams):
     result = get_stock_analysis(params.symbol)
     if result is None:
-        raise HTTPException(status_code=404, detail="Stock symbol not found")
+        raise HTTPException(status_code=400, detail="Stock symbol not found")
     return result
 
 # Run with: uvicorn main:app --reload --port 8080

@@ -251,6 +251,8 @@ def get_stock_analysis(symbol: str) -> dict | None:
 
 def get_stock_price_json(symbol: str, period: str) -> object:
     df = yfinance.download(symbol, period=period)
+    if df.shape[0] == 0:
+        return {}
     data = json.loads(df["Close"].to_json())
     parsed = {}
     kv = data[symbol].items()
