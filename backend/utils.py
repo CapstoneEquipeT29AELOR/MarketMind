@@ -60,9 +60,7 @@ def _news_yfinance(symbol, start, end, limit):
     return articles
 
 
-# ------------------------------------------------------------- sentiment ----
 _finbert_lock = threading.Lock()
-
 
 @lru_cache(maxsize=1)
 def _finbert():
@@ -89,8 +87,6 @@ def add_sentiment(articles):
         }
     return articles
 
-
-# ---------------------------------------------------------------- public ----
 log = logging.getLogger(__name__)
 
 
@@ -264,3 +260,7 @@ def get_stock_price_json(symbol: str, period: str) -> object:
         dt_str = dt_obj.strftime("%Y-%m-%d")
         parsed[dt_str] = data[symbol][k]
     return parsed
+
+def get_stock_lookup(query: str) -> list:
+    stocks_df = yfinance.Lookup(query).get_stock(count=25)
+    return stocks_df.index.tolist()
