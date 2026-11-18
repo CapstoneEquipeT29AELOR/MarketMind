@@ -1,43 +1,47 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from dotenv import load_dotenv
 
-from utils import query_news_api, get_stock_price_json
+from utils import get_market_news, get_stock_analysis, get_stock_price_json, get_stock_lookup
+from models import StockLookupParams, StockChartParams, NewsParams, AnalysisParams
 
 load_dotenv()
 app = FastAPI(title="MarketMind API", version="0.1.0")
 
 
-@app.get("/api/stocks")
-async def list_stocks():
-    pass
+# Errors use the contract's {"error": "..."} shape instead of FastAPI's {"detail": ...}
+@app.exception_handler(StarletteHTTPException)
+async def http_error(request: Request, exc: StarletteHTTPException):
+    return JSONResponse(status_code=exc.status_code, content={"error": str(exc.detail)})
 
 
-@app.get("/api/stocks/{symbol}/chart")
-async def get_stock_chart(symbol: str, range_: str = "1mo"):
-    # TODO: add parameter validation
-    return get_stock_price_json(symbol, range_)
+@app.post("/api/stocks/search")
+async def search_stocks(params: StockLookupParams):
+   return get_stock_lookup(params.query) 
 
 
-@app.get("/api/news")
-async def get_news(query: str, from_date: str = None):
-    news = query_news_api(query, from_date)
-    return news, 200
+@app.post("/api/stocks/chart")
+async def get_stock_chart(params: StockChartParams):
+    data = get_stock_price_json(params.symbol, params.timeline)
+    if data == {}:
+        raise HTTPException(status_code=400, detail=f"No data was found for the given stock: {params.symbol}")
+    return data
 
 
-@app.get("/api/analysis/{symbol}")
-async def get_analysis(symbol: str):
-    # algorithm will be ran from here. If a BUY or SELL signal is produced for the day, return the signal to the user. 
-    pass
+@app.post("/api/stocks/news")
+def get_news(params: NewsParams):
+    news = get_market_news(params.symbol, params.limit)
+    if len(news) == 0:
+        raise HTTPException(status_code=400, detail=f"No news were found for the given stock: {params.symbol}")
+    return news
 
 
-@app.get("/api/preferences")
-async def get_preferences():
-    pass
-
-
-@app.put("/api/preferences")
-async def update_preferences(preferences: dict):
-    pass
+@app.post("/api/stocks/analysis")
+def get_analysis(params: AnalysisParams):
+    result = get_stock_analysis(params.symbol)
+    if result is None:
+        raise HTTPException(status_code=400, detail="Stock symbol not found")
+    return result
 
 # Run with: uvicorn main:app --reload --port 8080
-
