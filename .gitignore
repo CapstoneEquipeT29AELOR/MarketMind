@@ -234,3 +234,6 @@ node_modules/
 !/artifacts/predictions/README.md
 /logs/*
 !/logs/README.md
+
+# TLS certificates (mounted into the frontend container)
+/certs/
