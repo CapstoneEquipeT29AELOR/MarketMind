@@ -1,6 +1,6 @@
-// Connects the page tabs to shared sample stock and analysis state.
+// Connects the page tabs to the shared selected-stock state.
 import { useState } from 'react';
-import { analysisBySymbol, stocks } from './data/mockData.js';
+import { TRACKED_SYMBOLS } from './api/stocks.js';
 import Header from './components/Header.jsx';
 import Sidebar from './components/Sidebar.jsx';
 import Analysis from './pages/Analysis.jsx';
@@ -13,17 +13,15 @@ const pages = { dashboard: Dashboard, markets: Markets, news: News, analysis: An
 
 export default function App() {
   const [activeSection, setActiveSection] = useState('dashboard');
-  const [selectedStock, setSelectedStock] = useState(stocks[0]);
-  const analysis = analysisBySymbol[selectedStock.symbol] ?? analysisBySymbol.NVDA;
-  // Replace these local lookups with API responses when the team is ready to connect a backend.
+  const [selectedSymbol, setSelectedSymbol] = useState(TRACKED_SYMBOLS[0]);
   const Page = pages[activeSection] ?? Dashboard;
 
   return (
     <div className="app-shell">
       <Sidebar activeSection={activeSection} onNavigate={setActiveSection} />
-      <Header activeSection={activeSection} selectedStock={selectedStock} onSelectStock={setSelectedStock} onNavigate={setActiveSection}/>
+      <Header activeSection={activeSection} selectedSymbol={selectedSymbol} onSelectSymbol={setSelectedSymbol} onNavigate={setActiveSection} />
       <main className="main-area">
-        <Page selectedStock={selectedStock} analysis={analysis} onNavigate={setActiveSection} onSelectStock={setSelectedStock} />
+        <Page selectedSymbol={selectedSymbol} onNavigate={setActiveSection} onSelectSymbol={setSelectedSymbol} />
       </main>
     </div>
   );

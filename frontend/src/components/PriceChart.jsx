@@ -1,19 +1,24 @@
-// Draws a simple line chart from the selected stock's local sample prices.
+// Draws a simple line chart of closing prices from POST /api/stocks/chart.
 import { useEffect, useState } from 'react';
+import { getStockChart } from '../api/client.js';
+import { useApi } from '../api/useApi.js';
 import { usePreferences } from '../context/PreferencesContext';
 import { getTranslation } from '../i18n/translations';
+import ApiStatus from './ApiStatus.jsx';
 
 const chartWidth = 760;
 const chartHeight = 180;
+// UI periods mapped to the API's `timeline` values.
 const periods = [
-  { value: '1D', label: '1D' },
-  { value: '1W', label: '1W' },
-  { value: '1M', label: '1M' },
-  { value: '3M', label: '3M' },
-  { value: '1Y', label: '1Y' },
+  { value: '1D', label: '1D', timeline: '1d' },
+  { value: '1W', label: '1W', timeline: '5d' },
+  { value: '1M', label: '1M', timeline: '1mo' },
+  { value: '6M', label: '6M', timeline: '6mo' },
+  { value: '1Y', label: '1Y', timeline: '1y' },
+  { value: '5Y', label: '5Y', timeline: '5y' },
 ];
 
-// Map mock prices into a stable SVG viewBox so the chart scales with its panel.
+// Map prices into a stable SVG viewBox so the chart scales with its panel.
 function getPoints(values) {
   const min = Math.min(...values);
   const max = Math.max(...values);
@@ -25,8 +30,8 @@ function getPoints(values) {
   });
 }
 
-export default function PriceChart({ stock }) {
-  const { preferences } = usePreferences();
+export default function PriceChart({ symbol }) {
+  const { preferences, updatePreference } = usePreferences();
   const t = (key) => getTranslation(preferences.language, key);
   const [period, setPeriod] = useState(
     periods.some((item) => item.value === preferences.chartPeriod)
@@ -40,7 +45,10 @@ export default function PriceChart({ stock }) {
     }
   }, [preferences.chartPeriod]);
 
-  const values = stock.chart[period] ?? stock.chart['1M'];
+  const timeline = periods.find((item) => item.value === period)?.timeline ?? '1mo';
+  const { data, error, loading } = useApi((options) => getStockChart(symbol, timeline, options), [symbol, timeline]);
+  const series = data ?? [];
+  const values = series.map((point) => point.close);
   const points = getPoints(values);
   const linePoints = points.map(({ x, y }) => `${x},${y}`).join(' ');
   const firstPrice = values[0];
@@ -48,7 +56,7 @@ export default function PriceChart({ stock }) {
   const change = lastPrice - firstPrice;
   const changePercent = firstPrice ? (change / firstPrice) * 100 : 0;
   const isPositive = change >= 0;
-  const gradientId = `chart-gradient-${stock.symbol}`;
+  const gradientId = `chart-gradient-${symbol}`;
 
   return (
     <section className="price-chart-section" aria-labelledby="chart-heading">
@@ -58,16 +66,17 @@ export default function PriceChart({ stock }) {
             {period === '1D' ? <span>{t('intradayPrice')}</span> : <span>{t('historicalPrice')}</span>}
           </h2>
           <p className="chart-period-caption">
-            {period} · {t('sampleData')}
+            {period}
+            {series.length > 0 && ` · ${series[0].date} – ${series[series.length - 1].date}`}
           </p>
         </div>
 
-        <span className={isPositive ? 'positive' : 'negative'}>
+        {values.length > 0 && <span className={isPositive ? 'positive' : 'negative'}>
           {change > 0 ? '+' : change < 0 ? '-' : ''}
           ${Math.abs(change).toFixed(2)}
           {' '}({changePercent > 0 ? '+' : ''}
           {changePercent.toFixed(2)}%)
-        </span>
+        </span>}
       </div>
 
       <div className="chart-periods" aria-label="Chart time range">
@@ -87,12 +96,15 @@ export default function PriceChart({ stock }) {
         ))}
       </div>
 
+      <ApiStatus loading={loading && !values.length} error={error} empty={!loading && !values.length} />
+
+      {values.length > 0 && !error && (<>
       <svg
         className="price-chart"
         viewBox={`0 0 ${chartWidth} ${chartHeight}`}
         preserveAspectRatio="none"
         role="img"
-        aria-label={`${stock.symbol} sample price chart for ${period}`}
+        aria-label={`${symbol} price chart for ${period}`}
       >
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
@@ -145,6 +157,7 @@ export default function PriceChart({ stock }) {
         <span>{period === '1D' ? <span>{t('midday')}</span> : <span>{t('midPeriod')}</span>}</span>
         <span>{period === '1D' ? <span>{t('close')}</span> : <span>{t('latest')}</span>}</span>
       </p>
+      </>)}
     </section>
   );
 }
