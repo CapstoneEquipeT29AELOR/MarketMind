@@ -1,0 +1,230 @@
+openapi: 3.0.3
+info:
+  title: MarketMind API
+  version: 0.1.0
+  description: |
+    API for stock search, price charts, news and analysis.
+    Errors raised by the application use the shape `{"error": "..."}`.
+    Request validation failures are returned by FastAPI as 422 responses.
+servers:
+  - url: http://localhost:8080
+    description: Local development (uvicorn main:app --reload --port 8080)
+
+paths:
+  /api/stocks/search:
+    post:
+      summary: Search for stocks
+      description: Look up stocks by a free-text query (e.g. company name or ticker).
+      operationId: searchStocks
+      tags: [Stocks]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockLookupParams'
+            example:
+              query: apple
+      responses:
+        '200':
+          description: Lookup results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FreeFormResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/stocks/chart:
+    post:
+      summary: Get stock price chart data
+      description: Returns historical price data for a symbol over the requested timeline.
+      operationId: getStockChart
+      tags: [Stocks]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockChartParams'
+            example:
+              symbol: AAPL
+              timeline: 5d
+      responses:
+        '200':
+          description: Price data for the symbol
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FreeFormResponse'
+        '400':
+          description: No data was found for the given stock
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "No data was found for the given stock: XXXX"
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/stocks/news:
+    post:
+      summary: Get news for a stock
+      description: Returns recent market news related to a symbol.
+      operationId: getStockNews
+      tags: [Stocks]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewsParams'
+            example:
+              symbol: AAPL
+              limit: 20
+      responses:
+        '200':
+          description: List of news items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  additionalProperties: true
+        '400':
+          description: No news were found for the given stock
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: "No news were found for the given stock: XXXX"
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/stocks/analysis:
+    post:
+      summary: Get stock analysis
+      description: Returns analysis for a symbol.
+      operationId: getStockAnalysis
+      tags: [Stocks]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnalysisParams'
+            example:
+              symbol: AAPL
+      responses:
+        '200':
+          description: Analysis result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FreeFormResponse'
+        '400':
+          description: Stock symbol not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                error: Stock symbol not found
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+components:
+  schemas:
+    Symbol:
+      type: string
+      minLength: 1
+      maxLength: 6
+      description: Stock ticker symbol
+      example: AAPL
+
+    StockLookupParams:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+          minLength: 1
+          maxLength: 50
+          description: Search text (company name or ticker)
+
+    StockChartParams:
+      type: object
+      required: [symbol]
+      properties:
+        symbol:
+          $ref: '#/components/schemas/Symbol'
+        timeline:
+          type: string
+          enum: ['1d', '5d', '1mo', '6mo', '1y', '5y', 'ytd', 'max']
+          default: '5d'
+
+    NewsParams:
+      type: object
+      required: [symbol]
+      properties:
+        symbol:
+          $ref: '#/components/schemas/Symbol'
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 20
+
+    AnalysisParams:
+      type: object
+      required: [symbol]
+      properties:
+        symbol:
+          $ref: '#/components/schemas/Symbol'
+
+    FreeFormResponse:
+      description: Response body whose structure is determined by the underlying data provider.
+      oneOf:
+        - type: object
+          additionalProperties: true
+        - type: array
+          items: {}
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+
+    ValidationErrorResponse:
+      type: object
+      description: Default FastAPI/Pydantic validation error body.
+      properties:
+        detail:
+          type: array
+          items:
+            type: object
+            properties:
+              loc:
+                type: array
+                items:
+                  oneOf:
+                    - type: string
+                    - type: integer
+              msg:
+                type: string
+              type:
+                type: string
+
+  responses:
+    ValidationError:
+      description: Request body failed validation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorResponse'
