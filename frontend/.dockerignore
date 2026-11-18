@@ -1,7 +1,5 @@
 node_modules
 dist
 Frontend_screenshots
-.env
-.env.*
 Dockerfile
 .dockerignore
