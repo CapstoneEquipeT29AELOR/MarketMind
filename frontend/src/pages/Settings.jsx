@@ -35,7 +35,7 @@ const chartPeriods = [
   ['1D', 'day'],
   ['1W', 'week'],
   ['1M', 'month'],
-  ['3M', 'threeMonths'],
+  ['6M', 'sixMonths'],
   ['1Y', 'year'],
   ['5Y', 'fiveYears'],
 ];
