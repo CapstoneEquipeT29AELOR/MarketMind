@@ -93,6 +93,11 @@ paths:
                 items:
                   type: object
                   additionalProperties: true
+                  properties:
+                    url:
+                      type: string
+                      format: uri
+                      description: Link to the original article, opened by the news card arrow
         '400':
           description: No news were found for the given stock
           content:

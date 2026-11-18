@@ -37,6 +37,7 @@ export const translations = {
     sampleHeadlines: 'Sample headlines',
     source: 'Source',
     readMore: 'Read more',
+    openArticle: 'Open article',
 
     // General
     loading: 'Loading…',
@@ -46,6 +47,15 @@ export const translations = {
     caution: 'Caution',
     selectStock: 'Select a stock',
     noData: 'No data available',
+    liveData: 'Live data',
+    trackedStocks: 'Tracked stocks',
+    searchStocks: 'Search ticker or company',
+    noResults: 'No matching stocks',
+    headlinesFor: 'Headlines for',
+    previousClose: 'Previous close',
+    monthHigh: '1-month high',
+    monthLow: '1-month low',
+    asOf: 'As of',
 
     // Settings
     settings: 'Settings',
@@ -91,7 +101,7 @@ export const translations = {
     day: '1 day',
     week: '1 week',
     month: '1 month',
-    threeMonths: '3 months',
+    sixMonths: '6 months',
     year: '1 year',
     fiveYears: '5 years',
   },
@@ -134,6 +144,7 @@ export const translations = {
     sampleHeadlines: 'Titres de démonstration',
     source: 'Source',
     readMore: 'Lire la suite',
+    openArticle: "Ouvrir l'article",
 
     // General
     loading: 'Chargement…',
@@ -143,6 +154,15 @@ export const translations = {
     caution: 'Prudence',
     selectStock: 'Choisir une action',
     noData: 'Aucune donnée disponible',
+    liveData: 'Données en direct',
+    trackedStocks: 'Actions suivies',
+    searchStocks: 'Rechercher un symbole ou une société',
+    noResults: 'Aucune action correspondante',
+    headlinesFor: 'Manchettes pour',
+    previousClose: 'Clôture précédente',
+    monthHigh: 'Sommet sur 1 mois',
+    monthLow: 'Creux sur 1 mois',
+    asOf: 'En date du',
 
     // Paramètres
     settings: 'Paramètres',
@@ -188,7 +208,7 @@ export const translations = {
     day: '1 jour',
     week: '1 semaine',
     month: '1 mois',
-    threeMonths: '3 mois',
+    sixMonths: '6 mois',
     year: '1 an',
     fiveYears: '5 ans',
   },

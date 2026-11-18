@@ -33,7 +33,7 @@ function loadPreferences() {
 
     const validThemes = ['light', 'dark', 'system'];
     const validLanguages = ['en', 'fr'];
-    const validPeriods = ['1D', '1W', '1M', '3M', '1Y'];
+    const validPeriods = ['1D', '1W', '1M', '6M', '1Y', '5Y'];
 
     return {
       ...DEFAULT_PREFERENCES,
