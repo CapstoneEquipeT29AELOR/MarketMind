@@ -1,0 +1,46 @@
+# Local development: plain HTTP, no certificates, hot reload for both services.
+#   docker compose -f docker-compose.dev.yml up --build
+# Frontend: http://localhost:5173   Backend API docs: http://localhost:8080/docs
+# Separate project name so this never replaces the production containers.
+name: marketmind-dev
+
+services:
+  backend:
+    build: ./backend
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080", "--reload"]
+    # Root so the fresh cache volume is writable; nothing is written into the mounted source.
+    user: root
+    env_file:
+      - path: ./backend/.env
+        required: false
+    environment:
+      # Keep the model cache outside the bind-mounted source folder.
+      HF_HOME: /home/app/.cache/huggingface
+    volumes:
+      # Live-mount the source so uvicorn reloads on save.
+      - ./backend:/app
+      # Persist the downloaded FinBERT model between container restarts.
+      - hf-cache-dev:/home/app/.cache/huggingface
+    ports:
+      - "8080:8080"
+
+  frontend:
+    # Vite dev server instead of the nginx/SSL production image.
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "npm ci && npm run dev -- --host 0.0.0.0 --port 5173"
+    environment:
+      # vite.config.js proxies /api to this target.
+      VITE_API_PROXY_TARGET: http://backend:8080
+    volumes:
+      - ./frontend:/app
+      # Keep the container's node_modules separate from the host's.
+      - frontend-node-modules:/app/node_modules
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+volumes:
+  hf-cache-dev:
+  frontend-node-modules:

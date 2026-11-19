@@ -1,27 +1,22 @@
 # MarketMind
 
-**Start here.** This package organizes the supplied FinBERT / XGBoost research
-code and reserves clearly labeled folders for the rest of the application.
-Folders marked **TODO** contain READMEs only: their suggested filenames are
-examples to implement, not working features.
-
 ## Where to put your work
 
 | Folder | What belongs here | Current state |
 | --- | --- | --- |
-| [frontend/](frontend/README.md) | Dashboard pages, components, API client, styles | TODO |
-| [backend/](backend/README.md) | HTTP API, application services, provider adapters, database | TODO |
-| [ml/](ml/README.md) | Sentiment, experimental forecasting, future summaries and evaluation | Existing scripts + TODOs |
-| [data/](data/README.md) | Raw inputs and processed datasets | NVDA news sample included |
-| [notebooks/](notebooks/README.md) | Interactive research | Existing trading notebook |
-| [experiments/](experiments/README.md) | Standalone prototypes | Existing SMA signal script |
-| [tests/](tests/README.md) | Unit, integration, and smoke tests | TODO |
-| [config/](config/README.md) | Shared configuration examples | TODO |
-| [scripts/](scripts/README.md) | Repeatable import, scoring, and demo commands | TODO |
-| [requirements/](requirements/README.md) | Python dependency lists | Original lists retained |
-| [artifacts/](artifacts/README.md) | Generated trained models and prediction JSON | Output folders prepared |
-| [logs/](logs/README.md) | Generated runtime logs | Output folder prepared |
-| [docs/](docs/README.md) | Project proposal, meetings, architecture, development order | Existing notes + new guides |
+| [frontend/](frontend/) | React + Vite app: landing page, dashboard pages, components, API client, translations, styles | Implemented |
+| [backend/](backend/README.md) | FastAPI service: stock search, charts, news and FinBERT analysis endpoints | Implemented |
+| [ml/](ml/README.md) | Sentiment, forecasting, prototypes, data, notebooks, scripts and logs | Existing scripts + TODOs |
+| [docs/](docs/README.md) | Project proposal, meetings, architecture, development order | Existing notes + guides |
+
+Inside the frontend, put new pages in `frontend/src/pages/`, reusable UI in
+`frontend/src/components/`, backend calls in `frontend/src/api/`, and every
+user-facing string in both languages in `frontend/src/i18n/translations.js`.
+Backend routes go in `backend/main.py`, request schemas in `backend/models.py`
+and data/model logic in `backend/utils.py`; keep both `openapi.yaml` files in
+sync when the API changes. Docker setup lives in each service's `Dockerfile`
+and in the root `docker-compose.yml` (production) and `docker-compose.dev.yml`
+(development).
 
 See [the complete file map](docs/FILE_MAP.md) for every original file's new
 location and [NEXT_STEPS.md](docs/NEXT_STEPS.md) for what to implement first.
@@ -45,10 +40,60 @@ in this archive. The supplied notes prioritize a market-information dashboard
 and source-backed news summaries; forecasting and trading research remain
 separate from that MVP.
 
+## Installation (Docker)
+
+The app (React frontend + FastAPI backend) runs entirely in Docker. You only
+need [Docker](https://docs.docker.com/get-docker/) with Docker Compose v2.
+
+```bash
+git clone git@github.com:ErikSkjenna/MarketMind.git
+cd MarketMind
+cp backend/.env.example backend/.env   # then fill in FINNHUB_API_KEY
+```
+
+### Development (no SSL)
+
+Runs the Vite dev server and uvicorn with hot reload; source folders are
+mounted, so edits apply immediately.
+
+```bash
+docker compose -f docker-compose.dev.yml up --build
+```
+
+- Frontend: <http://localhost:5173>
+- Backend API docs: <http://localhost:8080/docs>
+
+### Production (HTTPS)
+
+Serves the built frontend through nginx on ports 80/443 (HTTP redirects to
+HTTPS) and proxies `/api` to the backend. Put your certificate in `./certs`
+as `fullchain.pem` and `privkey.pem`. For a local test, a self-signed one works:
+
+```bash
+mkdir -p certs
+openssl req -x509 -nodes -newkey rsa:2048 -days 365 \
+  -keyout certs/privkey.pem -out certs/fullchain.pem -subj "/CN=localhost"
+docker compose up -d --build
+```
+
+Then open <https://localhost>.
+
+### Useful commands
+
+```bash
+docker compose logs -f backend                    # follow backend logs
+docker compose down                               # stop production stack
+docker compose -f docker-compose.dev.yml down     # stop dev stack
+```
+
+The first AI analysis request downloads the FinBERT model (a few hundred MB);
+it is cached in a Docker volume, so later starts are fast.
+
 ## Run the existing scripts
 
-Extract the ZIP, open the `MarketMind` folder in your editor, and run these
-commands from that folder. Create and activate a virtual environment first:
+The ML research scripts are not containerized; run them with a local Python
+environment. From the `MarketMind` folder, create and activate a virtual
+environment first:
 
 ```bash
 python -m venv .venv

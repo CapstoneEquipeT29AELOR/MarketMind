@@ -16,7 +16,7 @@ export default function Sidebar({ activeSection, onNavigate }) {
   
   return (
     <aside className="sidebar">
-      <a className="brand" href="#dashboard" onClick={() => onNavigate('dashboard')}>MarketMind</a>
+      <a className="brand" href="#app" onClick={() => onNavigate('dashboard')}>MarketMind</a>
       <nav className="sidebar-nav" aria-label="Main pages">
         {navigation.map(({ id, key }) => (
           <button
